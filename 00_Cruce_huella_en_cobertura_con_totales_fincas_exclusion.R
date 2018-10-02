@@ -42,9 +42,43 @@ cols.tabla <- function(tabla.datos){
 ## Path and static variables definition
 
 ## Definicion de rutas y variables estáticas
-in.files <- './00_in_data/'
-out.files <- './01_out_data/'
-FTTH.file <- str_c(out.files, '01_total_direcciones_FTTH.txt', sep = '', collapse = T)
+FTTH.file <- '../../000_DWH_txt_files/00_Coberturas/01_out_data/01_total_direcciones_FTTH.txt'
 munis.file <- '../../00_Analisis_municipios/data/clean/00_Analisis_municipios.xlsx'
-evol.semanal.file <- './01_out_data/evolucion_semanal_municipio.csv'
 fecha <- format(Sys.time(), "%Y%m%d")
+
+fincas.cobertura <- data.table(read.csv(file = FTTH.file,
+                                    header = T,
+                                    sep = ";",
+                                    quote = "",
+                                    dec = ",",
+                                    colClasses = 'character',
+                                    comment.char = "",
+                                    encoding = 'UTF-8',
+                                    strip.white = T))
+
+total.fincas.66munis <- data.table(read.csv('./indata/Total_fincas_municipios_ZET.csv',
+                                            header = T,
+                                            sep = ";",
+                                            quote = "",
+                                            dec = ",",
+                                            colClasses = 'character',
+                                            comment.char = "",
+                                            encoding = 'UTF-8',
+                                            strip.white = T))
+
+fincas.cobertura <- fincas.cobertura[ranking == 1,]
+fincas.cobertura$UUII <- as.integer(fincas.cobertura$UUII)
+fincas.cobertura$accesos <- as.integer(fincas.cobertura$accesos)
+fincas.cobertura.exclusion <- fincas.cobertura[Exclusion == 1, .(UUII = sum(UUII), accesos = sum(accesos)), by = c("G18", "ordenada.tipo.huella")]
+
+
+
+
+
+
+
+
+
+
+
+
