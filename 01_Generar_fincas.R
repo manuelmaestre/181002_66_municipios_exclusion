@@ -183,7 +183,7 @@ total.fincas <- total.fincas[!is.na(UUII),]
 ############################################################################################################################
 
 
-write.csv(x = total.fincas[is.na(X) | X == "",],
+write.table(x = total.fincas[is.na(X) | X == "",],
           file = 'indata/fincas_sin_xy.txt',
           quote = F, sep = ";",
           row.names = F,
@@ -191,15 +191,12 @@ write.csv(x = total.fincas[is.na(X) | X == "",],
           fileEncoding = 'UTF-8' )
 
 
-write.csv(x = total.fincas[!(is.na(X) | X == ""),],
+write.table(x = total.fincas[!(is.na(X) | X == ""),],
           file = 'outdata/total_fincas_xy.txt',
           quote = F, sep = ";",
           row.names = F,
           col.names = T,
           fileEncoding = 'UTF-8' )
-
-
-
 
 
 ############################################################################################################################
