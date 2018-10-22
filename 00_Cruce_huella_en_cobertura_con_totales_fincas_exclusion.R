@@ -63,14 +63,20 @@ total.fincas.66munis <- data.table(read.csv('./indata/Total_fincas_municipios_ZE
                                             dec = ",",
                                             colClasses = 'character',
                                             comment.char = "",
-                                            encoding = 'UTF-8',
+                                            encoding = 'Latin-1',
                                             strip.white = T))
 
 fincas.cobertura <- fincas.cobertura[ranking == 1,]
 fincas.cobertura$UUII <- as.integer(fincas.cobertura$UUII)
 fincas.cobertura$accesos <- as.integer(fincas.cobertura$accesos)
-fincas.cobertura.exclusion <- fincas.cobertura[Exclusion == 1, .(UUII = sum(UUII), accesos = sum(accesos)), by = c("G18", "ordenada.tipo.huella")]
+fincas.cobertura.exclusion <- fincas.cobertura[Exclusion == 1, .(UUII = sum(UUII), accesos = sum(accesos)), by = c("G18", "ine.txt", "Provincia", "Municipio", "Tipo.via", "Nombre.Via", "Numero", "BIS", "ordenada.tipo.huella")]
 
+## Marcamos en el total fincas municipios de exclusion, las que cruzan con fincas en cobertura
+
+total.fincas.66munis <- merge(total.fincas.66munis, fincas.cobertura.exclusion[, c("G18", "ordenada.tipo.huella", "UUII", "accesos")], all.x = T, by.x = 'cod_finca', by.y = 'G18')
+total.fincas.66munis[is.na(UUII), UUII := UUII_EST]
+
+## Agregamos las fincas en cobertura pero que no estaban en el total fincas
 
 
 
