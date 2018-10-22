@@ -1,7 +1,6 @@
-## Analizar fincas en municipios de exclusion sobre huella actual
-## Analizar fincas en municipios de exclusion en huella actual y no en
-## total de fincas con xy
-
+## Integra las fincas en historico y las adicionales de cobertura
+## Genera las fincas sin xy para procesar su busqueda
+## Agrega las x,y que se hayan recuperado anteriormente
 
 ## Library load
 
@@ -183,7 +182,7 @@ total.fincas <- total.fincas[!is.na(UUII),]
 ############################################################################################################################
 
 
-write.csv(x = total.fincas[is.na(X) | X == "",],
+write.table(x = total.fincas[is.na(X) | X == "",],
           file = 'indata/fincas_sin_xy.txt',
           quote = F, sep = ";",
           row.names = F,
@@ -191,15 +190,12 @@ write.csv(x = total.fincas[is.na(X) | X == "",],
           fileEncoding = 'UTF-8' )
 
 
-write.csv(x = total.fincas[!(is.na(X) | X == ""),],
+write.table(x = total.fincas[!(is.na(X) | X == ""),],
           file = 'outdata/total_fincas_xy.txt',
           quote = F, sep = ";",
           row.names = F,
           col.names = T,
           fileEncoding = 'UTF-8' )
-
-
-
 
 
 ############################################################################################################################
