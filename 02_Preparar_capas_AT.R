@@ -128,9 +128,6 @@ munis.exclusion <- as.data.table(read_xlsx(fich.munis.exclusion, sheet = 1, col_
 ########################################            MAIN CODE                        #######################################
 ############################################################################################################################
 
-
-
-
 ## Generar capa total de municipios AT
 
 ficheros.total <- lista.ficheros('indata/AT/', 'shp')
@@ -149,13 +146,6 @@ if (nrow(ficheros.total)>0){
 
 sapply(capa.integrada@data, class)
 suppressWarnings(writeOGR(capa.integrada, dsn = dir.salida, layer = nombre.capa.salida, driver = "ESRI Shapefile", overwrite_layer = T, verbose = T ))
-
-
-
-
-
-
-
 
 ############################################################################################################################
 ########################################            REPORTS                          #######################################
