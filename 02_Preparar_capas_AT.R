@@ -94,6 +94,8 @@ capa.prepara <- function(ruta){
   directorio <- str_c(head(unlist(strsplit(ruta, split = "/")), length(unlist(strsplit(ruta, split = "/")))-1), collapse = "/") 
   capa <- unlist(strsplit(tail(unlist(strsplit(ruta, split = "/")), 1), split = "[.]"))[1]
   capa.temp <- readOGR(dsn = directorio, layer = capa, disambiguateFIDs = TRUE)
+  capa.temp@data$bolsa.numero  <- 1:nrow(capa.temp)
+  capa.temp@data$bolsa.ID  <- paste(capa.temp@data$bolsa.numero, capa.temp@data$INE, sep = '_')
   
   # Establecer proyeccion
   
@@ -144,8 +146,7 @@ if (nrow(ficheros.total)>0){
 ########################################            EXPORTS                          #######################################
 ############################################################################################################################
 
-sapply(capa.integrada@data, class)
-suppressWarnings(writeOGR(capa.integrada, dsn = dir.salida, layer = nombre.capa.salida, driver = "ESRI Shapefile", overwrite_layer = T, verbose = T ))
+suppressWarnings(writeOGR(capa.integrada, dsn = dir.salida, layer = nombre.capa.salida, driver = "ESRI Shapefile", overwrite_layer = T, verbose = T, encoding = 'UTF-8' ))
 
 ############################################################################################################################
 ########################################            REPORTS                          #######################################
@@ -153,10 +154,4 @@ suppressWarnings(writeOGR(capa.integrada, dsn = dir.salida, layer = nombre.capa.
 
 
 
-
-
-
-
-
-#### FUNCTIONS TEST
 

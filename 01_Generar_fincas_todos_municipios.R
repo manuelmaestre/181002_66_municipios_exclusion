@@ -5,6 +5,7 @@
 ## Library load
 
 library(readxl)
+library(xlsx)
 library(data.table)
 library(stringr)
 library(zoo)
@@ -92,7 +93,7 @@ fincas.historicas <- data.table(read.csv('./indata/Total_fincas_municipios_ZET.c
 fincas.cobertura <- fincas.cobertura[ranking == 1,]
 fincas.cobertura$UUII <- as.integer(fincas.cobertura$UUII)
 fincas.cobertura$accesos <- as.integer(fincas.cobertura$accesos)
-fincas.cobertura.exclusion <- fincas.cobertura[Exclusion == 1, .(UUII = sum(UUII), accesos = sum(accesos)), by = c('ine.txt', 'Provincia', 'Municipio', 'G18', 'Tipo.via', 'Nombre.Via', 'Numero', 'ordenada.tipo.huella', 'Codigo.Postal')]
+fincas.cobertura.exclusion <- fincas.cobertura[, .(UUII = sum(UUII), accesos = sum(accesos)), by = c('ine.txt', 'Provincia', 'Municipio', 'G18', 'Tipo.via', 'Nombre.Via', 'Numero', 'ordenada.tipo.huella', 'Codigo.Postal')]
 rm(fincas.cobertura)
 
 ##### Normalizar nombres de via de la tabla fincas.cobertura.exclusion
@@ -188,20 +189,14 @@ total.fincas <- total.fincas[!is.na(UUII),]
 ### Marcamos libre o cubierta en funcion del tipo de huella
 
 relacion.tipohuella.librecubierta <- data.table(ordenada.tipo.huella = c("00_Libre","01_StandAlone","02_Remedies","03_Mutualizada MMB","04_Mutualizada OSP","05_Ufinet","06_Adamo","07_AccesoFibra_JAZZ","08_AccesoFibra_OSP","09_AccesoFibra_VDF", "10_NEBA"),
-                                                LibreCubierta = c("00_Libre","01_Cubierta","01_Cubierta","01_Cubierta","01_Cubierta","01_Cubierta","01_Cubierta","02_Bitstream","02_Bitstream","01_Cubierta_VDF", "00_Libre"))
+                                                LibreCubierta = c("00_Libre","01_Cubierta","01_Cubierta","01_Cubierta","01_Cubierta","01_Cubierta","01_Cubierta","02_Bitstream","02_Bitstream","01_Cubierta_VDF", "00_Libre")
+                                                )
 orden.columnas.inicial <- colnames(total.fincas)
 total.fincas <- merge(total.fincas, relacion.tipohuella.librecubierta, all.x = T, by.x = 'ordenada.tipo.huella', by.y = 'ordenada.tipo.huella')
 nuevas.columnas <- colnames(total.fincas)[!colnames(total.fincas) %in% orden.columnas.inicial]
 setcolorder(total.fincas,append(orden.columnas.inicial, nuevas.columnas))
 
 # TODO:  Cambiar proyección a WGS84 de las fincas historicas. Vienen de origen en EDS50 UTM zONE 30
-EPSG <- make_EPSG()
-proyeccion.inicial <- as.character(EPSG[grepl("ED50 / UTM zone 30N", EPSG$note), c("code")])
-proyeccion.final <- as.character(EPSG[grepl("WGS 84 / UTM zone 30N", EPSG$note), c("code")])
-
-# Creamos la capa de puntos desde las xy de las fincas
-total.fincas$X <- as.double(str_replace(total.fincas$X, ",", "."))
-total.fincas$Y <- as.double(str_replace(total.fincas$Y, ",", "."))
 
 EPSG <- make_EPSG()
 proyeccion.inicial <- as.character(EPSG[grepl("ED50 / UTM zone 30N", EPSG$note), c("code")])
@@ -216,7 +211,10 @@ total.fincas.xy[MUNICIPIO == 'Oviedo', X := X/10000]
 total.fincas.xy[MUNICIPIO == 'Oviedo', Y := Y/1000]
 total.fincas.xy <- total.fincas.xy[,][order(Y)]
 
-#Poblar con datos de x,y obtenidos de Google
+total.fincas.xy <- total.fincas.xy[,][order(X)]
+
+
+# TODO: Poblar con datos de x,y obtenidos de Google
 
 geolocalizadas <- data.table(read.csv(file.geolocalizadas, header = T, sep = ";", dec = '.', colClasses = 'character', strip.white = T, blank.lines.skip = T, encoding = 'UTF-8'))
 geolocalizadas <- geolocalizadas[, c('cod_finca', 'geo_longitud','geo_latitud')]
@@ -229,7 +227,7 @@ coordenadas.google <- as.matrix(geolocalizadas[,.(geo_longitud, geo_latitud)])
 capa_puntos_google <- SpatialPointsDataFrame(coordenadas.google, geolocalizadas, proj4string = CRS("+init=epsg:4326"), coords.nrs = c(2,3), match.ID = T )
 capa_puntos_google <- spTransform(capa_puntos_google, CRS("+init=epsg:32630"))
 proj4string(capa_puntos_google) <- CRS("+init=epsg:32630")
-suppressWarnings(writeOGR(capa_puntos_google, dsn = dir.salida.capas, layer = 'google', driver = "ESRI Shapefile",overwrite_layer = T , encoding = 'UTF-8'))
+
 
 coordenadas.poblar <- data.table(cbind(capa_puntos_google$cod_finca, capa_puntos_google@coords))
 coordenadas.poblar$geo_longitud <- as.double(coordenadas.poblar$geo_longitud)
@@ -247,25 +245,6 @@ total.fincas.xy <- rbind(total.fincas.xy, coordenadas.recuperadas)
 
 
 ## Coordenadas dentro de margenes de España ED50 UMT30
-xmin <- -1088383
-xmax <- 1304525
-ymin <- 3097279
-ymax <- 4900600
-
-outlayers2 <- total.fincas.xy[!((X <= xmax & X >= xmin) & (Y <= ymax & Y >= ymin)),]
-total.fincas.xy <- total.fincas.xy[(X <= xmax & X >= xmin) & (Y <= ymax & Y >= ymin),]
-
-
-## Proyectamos a WGS84 y guardamos como shape
-
-coordenadas <- as.matrix(total.fincas.xy[,.(X, Y)])
-capa_puntos <- SpatialPointsDataFrame(coordenadas, total.fincas.xy, proj4string = CRS("+init=epsg:23030"), coords.nrs = c(5,6), match.ID = T )
-# LLevamos a la misma proyeccion comun del proyecto
-capa_puntos <- spTransform(capa_puntos, CRS("+init=epsg:32630"))
-proj4string(capa_puntos) <- CRS("+init=epsg:32630")
-
-
-## Coordenadas dentro de margenes de España ED50 UMT30
 
 xmin <- -1088383
 xmax <- 1304525
@@ -282,42 +261,52 @@ capa_puntos <- SpatialPointsDataFrame(coordenadas, total.fincas.xy, proj4string 
 # LLevamos a la misma proyeccion comun del proyecto
 capa_puntos <- spTransform(capa_puntos, CRS("+init=epsg:32630"))
 proj4string(capa_puntos) <- CRS("+init=epsg:32630")
+
+
 
 ############################################################################################################################
 ########################################            EXPORTS                          #######################################
 ############################################################################################################################
 
-### Capa de salida
+### Capas de salida
+
 
 suppressWarnings(writeOGR(capa_puntos, dsn = dir.salida.capas, layer = nombre.capa.fincas, driver = "ESRI Shapefile",overwrite_layer = T , encoding = 'UTF-8'))
 
 ### Ficheros de datos
 
+
 write.table(x = total.fincas[(is.na(X) | X == 0) & !is.na(codigo_postal),c("cod_finca", "ine_mun", "PROVINCIA", "MUNICIPIO", "TipoVia", "Calle", "Npolic", "letra", "codigo_postal")],
-          file = 'indata/fincas_sin_xy.txt',
-          quote = F, sep = ";",
-          row.names = F,
-          col.names = T,
-          fileEncoding = 'UTF-8' )
-
-
-write.table(x = total.fincas.xy,
-          file = 'outdata/total_fincas_xy.txt',
-          quote = F, sep = ";",
-          row.names = F,
-          col.names = T,
-          fileEncoding = 'UTF-8' )
-
-write.table(x = total.fincas.xy[MUNICIPIO == 'Albacete',],
-            file = 'outdata/total_fincas_Albacete_xy.txt',
+            file = 'indata/fincas_sin_xy.txt',
             quote = F, sep = ";",
             row.names = F,
             col.names = T,
             fileEncoding = 'UTF-8' )
 
+
+write.table(x = total.fincas.xy,
+            file = 'outdata/total_fincas_xy.txt',
+            quote = F, sep = ";",
+            row.names = F,
+            col.names = T,
+            fileEncoding = 'UTF-8' )
+
+
+
+
 ############################################################################################################################
 ########################################            REPORTS                          #######################################
 ############################################################################################################################
+
+agregado.codigo.postal <- dcast(total.fincas, codigo_postal ~ LibreCubierta , sum, value.var = 'UUII')
+
+datos.comercial <- read_excel('indata/codigos_postales_residencial.xlsx', sheet = 'ranking_CP', col_names = T, trim_ws = T)
+
+datos.comercial <- merge(datos.comercial, agregado.codigo.postal, all.x = T, by.x = 'CP', by.y = 'codigo_postal')
+
+setorder(datos.comercial, -"02_Bitstream")
+
+write.xlsx(datos.comercial, file = 'outdata/ranking_codigo_postal.xlsx', sheetName = 'CPs', col.names = T, row.names = )
 
 
 
